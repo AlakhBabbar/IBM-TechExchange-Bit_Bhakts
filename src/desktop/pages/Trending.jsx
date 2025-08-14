@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import PostCard from '../components/PostCard';
+import Navbar from '../components/NavBar';
 import { ArrowLeft, TrendingUp } from 'lucide-react';
 
 export default function Trending() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [viewMode, setViewMode] = useState('trending'); // 'trending', 'category', 'post'
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Top 5 trending categories with dummy data
   const trendingCategories = [
@@ -193,14 +195,33 @@ export default function Trending() {
     setViewMode('category');
   };
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  // Filter trending categories based on search query
+  const filteredCategories = trendingCategories.filter(category =>
+    category.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    category.posts.some(post => 
+      post.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.text.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
+
   return (
-    <>
-      <Sidebar />
-      <div className="h-full overflow-y-auto p-6 flex flex-col items-center bg-black">
+    <div className="min-h-screen bg-black flex flex-col">
+      <Navbar 
+        onSearch={handleSearch}
+        searchPlaceholder="Search trending topics, users, locations..."
+      />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <div className="flex-1 overflow-y-auto p-6 bg-black">
         
         {/* Trending Categories View */}
         {viewMode === 'trending' && (
-          <div className="max-w-4xl w-full space-y-6">
+          <div className="max-w-4xl mx-auto w-full space-y-6">
             {/* Page Header */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -211,7 +232,8 @@ export default function Trending() {
             </div>
 
             {/* Trending Categories */}
-            {trendingCategories.map((category, index) => (
+            {filteredCategories.length > 0 ? (
+              filteredCategories.map((category, index) => (
               <div
                 key={category.id}
                 className="relative group bg-neutral-900 rounded-xl p-6 hover:bg-neutral-800 transition-all duration-300 cursor-pointer"
@@ -263,7 +285,15 @@ export default function Trending() {
                   </button>
                 </div>
               </div>
-            ))}
+            ))
+            ) : (
+              <div className="text-center py-12 col-span-full">
+                <div className="text-gray-400 text-lg">No trending topics found</div>
+                <div className="text-gray-500 text-sm mt-2">
+                  Try searching for something else
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -372,7 +402,8 @@ export default function Trending() {
           </div>
         )}
 
+        </div>
       </div>
-    </>
+    </div>
   );
 }

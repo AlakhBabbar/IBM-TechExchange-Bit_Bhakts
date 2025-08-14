@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import PostCard from '../components/PostCard';
+import Navbar from '../components/NavBar';
 import { ArrowLeft } from 'lucide-react';
 
 export default function Explore() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [viewMode, setViewMode] = useState('explore'); // 'explore', 'post'
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Dummy posts with varying content and sizes
   const posts = [
@@ -131,6 +133,13 @@ export default function Explore() {
     }
   ];
 
+  // Filter posts based on search query
+  const filteredPosts = posts.filter(post => 
+    post.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.text.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const handlePostClick = (post) => {
     setSelectedPost(post);
     setViewMode('post');
@@ -141,22 +150,31 @@ export default function Explore() {
     setViewMode('explore');
   };
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
   return (
-    <>
-      <Sidebar />
-      <div className="h-full overflow-y-auto p-6 flex flex-col items-center bg-black">
+    <div className="min-h-screen bg-black flex flex-col">
+      <Navbar 
+        onSearch={handleSearch}
+        searchPlaceholder="Search images, users, locations..."
+      />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <div className="flex-1 overflow-y-auto p-6 bg-black">
         
         {/* Explore Grid View */}
         {viewMode === 'explore' && (
           <div className="flex justify-center">
-            {/* Masonry Grid Layout with Fixed Skeleton Dimensions */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 max-w-7xl">
-              {posts.map((post, index) => {
-                // Define repeating skeleton patterns
-                const skeletonSizes = [
-                  'h-48', 'h-64', 'h-56', 'h-40', 'h-52', 'h-60'
-                ];
-                const skeletonSize = skeletonSizes[index % skeletonSizes.length];
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 max-w-7xl">
+                {filteredPosts.length > 0 ? (
+                  filteredPosts.map((post, index) => {
+                    // Define repeating skeleton patterns
+                    const skeletonSizes = [
+                      'h-48', 'h-64', 'h-56', 'h-40', 'h-52', 'h-60'
+                    ];
+                    const skeletonSize = skeletonSizes[index % skeletonSizes.length];
                 
                 return (
                   <div
@@ -171,9 +189,17 @@ export default function Explore() {
                     />
                   </div>
                 );
-              })}
+                  })
+                ) : (
+                  <div className="text-center py-12 col-span-full">
+                    <div className="text-gray-400 text-lg">No posts found</div>
+                    <div className="text-gray-500 text-sm mt-2">
+                      Try searching for something else
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
         )}
 
         {/* Instagram-style Post Feed View */}
@@ -223,7 +249,8 @@ export default function Explore() {
           </div>
         )}
 
+        </div>
       </div>
-    </>
+    </div>
   );
 }
