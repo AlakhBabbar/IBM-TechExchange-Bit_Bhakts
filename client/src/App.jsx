@@ -1,6 +1,6 @@
 import './App.css'
 import MobileApp from './mobile/MobileApp'
-import Desktop from './desktop/desktop'
+import Desktop from './desktop/Desktop'
 
 function App() {
   return (
