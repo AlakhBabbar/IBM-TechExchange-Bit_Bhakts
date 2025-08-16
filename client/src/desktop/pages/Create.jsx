@@ -1,8 +1,13 @@
 import { useState, useRef } from "react";
-import { Camera, Video, Upload, X, Play, Pause, Volume2, VolumeX, ImageIcon } from "lucide-react";
+import { Camera, Video, Upload, X, ImageIcon } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 import LocationSelector from "../components/LocationSelector";
+import { useAuth } from '../../context/AuthContext';
+import { createPostWithMedia } from '../../Firebase/firestore';
 
 export default function Create() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileType, setFileType] = useState(null); // 'image' or 'video'
   const [description, setDescription] = useState("");
@@ -22,7 +27,6 @@ export default function Create() {
     state: "",
     country: ""
   });
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -108,13 +112,25 @@ export default function Create() {
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
+      // Check file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        alert(`File size too large. Maximum allowed size is 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        alert('Please select a valid image or video file.');
+        return;
+      }
+
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       setSelectedFile(file);
       setFileType(type);
       
-      // Reset video controls if switching files
+      // Set default mute for videos
       if (type === 'video') {
-        setIsPlaying(false);
         setIsMuted(true);
       }
     }
@@ -124,9 +140,21 @@ export default function Create() {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
     if (file && (file.type.startsWith('image/') || file.type.startsWith('video/'))) {
+      // Check file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        alert(`File size too large. Maximum allowed size is 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
+        return;
+      }
+
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       setSelectedFile(file);
       setFileType(type);
+      
+      // Set default mute for videos
+      if (type === 'video') {
+        setIsMuted(true);
+      }
     }
   };
 
@@ -137,80 +165,110 @@ export default function Create() {
   const removeFile = () => {
     setSelectedFile(null);
     setFileType(null);
-    setIsPlaying(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const toggleVideoPlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
   const handlePost = async () => {
-    if (!selectedFile) return;
+    // Validation
+    if (!selectedFile) {
+      alert("Please select a file to upload");
+      return;
+    }
+    
+    if (!description.trim()) {
+      alert("Please add a description");
+      return;
+    }
+    
+    if (!isIssue) {
+      alert("Please specify if this is an issue");
+      return;
+    }
+    
+    if (!user) {
+      alert("Please log in to create a post");
+      return;
+    }
     
     setIsUploading(true);
     
     try {
-      // TODO: Implement Firebase upload logic
-      console.log("Uploading file:", selectedFile);
-      console.log("Form data:", {
-        description,
-        isIssue,
-        moods: [...selectedMoods, ...(customMood ? [customMood] : [])],
-        categories: [...selectedCategories, ...(customCategory ? [customCategory] : [])],
-        postType: postType === "Other" ? customPostType : postType,
-        coordinates,
-        location
-      });
-      
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Reset form after successful upload
-      setSelectedFile(null);
-      setFileType(null);
-      setDescription("");
-      setIsIssue("");
-      setSelectedMoods([]);
-      setCustomMood("");
-      setSelectedCategories([]);
-      setCustomCategory("");
-      setPostType("");
-      setCustomPostType("");
-      setCoordinates({ lat: null, lng: null });
-      setLocation({
-        street: "",
-        locality: "",
-        city: "",
-        district: "",
-        state: "",
-        country: ""
-      });
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      // Prepare post data
+      const allMoods = [...selectedMoods];
+      if (customMood.trim()) {
+        allMoods.push(customMood.trim());
       }
       
-      alert("Post uploaded successfully!");
+      const allCategories = [...selectedCategories];
+      if (customCategory.trim()) {
+        allCategories.push(customCategory.trim());
+      }
+      
+      const finalPostType = postType === "Other" && customPostType.trim() 
+        ? customPostType.trim() 
+        : postType || "General Update";
+      
+      const postData = {
+        description: description.trim(),
+        isIssue,
+        moods: allMoods,
+        categories: allCategories,
+        postType: finalPostType,
+        coordinates,
+        location
+      };
+      
+      console.log("🔥 Creating post with data:", postData);
+      console.log("🔥 User details:", user);
+      
+      // Create post with media upload
+      const result = await createPostWithMedia(user.uid, selectedFile, postData);
+      
+      if (result.success) {
+        console.log("✅ Post created successfully:", result.postId);
+        console.log("✅ Media URL:", result.mediaUrl);
+        
+        // Reset form after successful upload
+        setSelectedFile(null);
+        setFileType(null);
+        setDescription("");
+        setIsIssue("");
+        setSelectedMoods([]);
+        setCustomMood("");
+        setSelectedCategories([]);
+        setCustomCategory("");
+        setPostType("");
+        setCustomPostType("");
+        setCoordinates({ lat: null, lng: null });
+        setLocation({
+          street: "",
+          locality: "",
+          city: "",
+          district: "",
+          state: "",
+          country: ""
+        });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        
+        alert("Post uploaded successfully!");
+        
+        // Navigate to ForYou page to see the new post
+        setTimeout(() => {
+          navigate('/for-you');
+        }, 1000);
+      } else {
+        throw new Error("Post creation failed but no error was thrown");
+      }
       
     } catch (error) {
-      console.error("Upload error:", error);
-      alert("Failed to upload post. Please try again.");
+      console.error("❌ Upload error:", error);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
+      alert(`Failed to upload post: ${error.message}`);
     }
     
     setIsUploading(false);
@@ -243,8 +301,11 @@ export default function Create() {
                     <h3 className="text-lg font-semibold text-white mb-2">
                       Upload Photo or Video
                     </h3>
-                    <p className="text-gray-400 mb-4">
+                    <p className="text-gray-400 mb-2">
                       Drag and drop your file here, or click to browse
+                    </p>
+                    <p className="text-gray-500 text-sm mb-4">
+                      Maximum file size: 10MB
                     </p>
                     <div className="flex justify-center space-x-4 text-sm text-gray-500">
                       <span className="flex items-center">
@@ -288,26 +349,17 @@ export default function Create() {
                     <video
                       ref={videoRef}
                       src={URL.createObjectURL(selectedFile)}
-                      className="w-full h-96 object-cover"
+                      className="w-full h-96 object-cover rounded-t-lg"
+                      controls
                       muted={isMuted}
-                      loop
-                    />
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
                     
-                    {/* Video Controls */}
-                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
-                      <button
-                        onClick={toggleVideoPlay}
-                        className="bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-                      >
-                        {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                      </button>
-                      
-                      <button
-                        onClick={toggleMute}
-                        className="bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-                      >
-                        {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                      </button>
+                    {/* Video Info Overlay */}
+                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      VIDEO PREVIEW
                     </div>
                   </div>
                 )}
@@ -320,6 +372,11 @@ export default function Create() {
                       <p className="text-gray-400 text-sm">
                         {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
+                      {fileType === 'video' && (
+                        <p className="text-blue-400 text-xs mt-1">
+                          📹 Thumbnail will be auto-generated
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       {fileType === 'image' ? (

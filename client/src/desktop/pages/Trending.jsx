@@ -338,7 +338,7 @@ export default function Trending() {
 
         {/* Instagram-style Post Feed View */}
         {viewMode === 'post' && selectedPost && (
-          <div className="max-w-md w-full">
+          <div className="max-w-md w-full mx-auto">
             {/* Back Button and Header */}
             <div className="flex items-center gap-4 mb-6">
               <button
