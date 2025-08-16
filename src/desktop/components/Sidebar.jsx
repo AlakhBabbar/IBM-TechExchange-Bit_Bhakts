@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, MapPin, User, Plus, Settings, Menu } from 'lucide-react';
+import { Home, MapPin, User, Plus, Bell, Menu, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -10,6 +11,15 @@ function Sidebar() {
         return saved ? JSON.parse(saved) : false;
     });
     const location = useLocation();
+    const { logout, user } = useAuth();
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
+    };
 
     const toggleSidebar = () => {
         const newState = !isCollapsed;
@@ -24,6 +34,7 @@ function Sidebar() {
     const sidebarItems = [
         { to: "/for-you", label: "Home", icon: <Home size={20} />, isActive: isHomePage },
         { to: "/map", label: "Map", icon: <MapPin size={20} />, isActive: location.pathname === '/map' },
+        { to: "/notifications", label: "Notifications", icon: <Bell size={20} />, isActive: location.pathname === '/notifications' },
         { to: "/profile", label: "Profile", icon: <User size={20} />, isActive: location.pathname === '/profile' },
         { to: "/create", label: "Create", icon: <Plus size={20} />, isActive: location.pathname === '/create' },
     ];
@@ -70,20 +81,26 @@ function Sidebar() {
                     </ul>
                 </nav>
 
-                {/* Settings at Bottom */}
-                <div className="p-4 border-t border-neutral-800">
-                    <NavLink
-                        to="/settings"
-                        className={({ isActive }) =>
-                            `flex items-center ${isCollapsed ? 'justify-center p-3' : 'gap-3 p-3'} rounded-lg hover:bg-neutral-800 transition-colors ${
-                                isActive ? 'bg-neutral-800 text-white' : 'text-gray-300'
-                            }`
-                        }
-                        title={isCollapsed ? 'Settings' : ''}
+                {/* Settings and Logout at Bottom */}
+                <div className="p-4 border-t border-neutral-800 space-y-2">
+                    {/* Logout Button */}
+                    <button
+                        onClick={handleLogout}
+                        className={`flex items-center ${isCollapsed ? 'justify-center p-3 w-full' : 'gap-3 p-3 w-full'} rounded-lg hover:bg-red-600/20 text-red-400 hover:text-red-300 transition-colors`}
+                        title={isCollapsed ? 'Logout' : ''}
                     >
-                        <span><Settings size={20} /></span>
-                        {!isCollapsed && <span className="text-base">Settings</span>}
-                    </NavLink>
+                        <span><LogOut size={20} /></span>
+                        {!isCollapsed && <span className="text-base">Logout</span>}
+                    </button>
+
+                    {/* User Info */}
+                    {!isCollapsed && user && (
+                        <div className="pt-2 border-t border-neutral-800 mt-2">
+                            <div className="text-xs text-gray-400 truncate">
+                                {user.email}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </>

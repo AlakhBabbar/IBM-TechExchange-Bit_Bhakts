@@ -1,19 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, MapPin, FileText, Camera, ArrowRight, Upload } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import LocationSelector from "../components/LocationSelector";
 
 export default function AccountSetup() {
+  const navigate = useNavigate();
+  const { completeAccountSetup } = useAuth();
+  
   const [formData, setFormData] = useState({
     username: "",
     bio: "",
-    location: "",
+    coordinates: { lat: null, lng: null },
+    location: {
+      street: "",
+      locality: "",
+      city: "",
+      district: "",
+      state: "",
+      country: "",
+      postalCode: ""
+    },
     profilePicture: null
   });
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [profilePreview, setProfilePreview] = useState(null);
 
+  // Debug logging
+  useEffect(() => {
+    console.log("🏗️ AccountSetup component mounted");
+    return () => {
+      console.log("🏗️ AccountSetup component unmounted");
+    };
+  }, []);
+  
+  // Debug current step changes
+  useEffect(() => {
+    console.log("🔄 AccountSetup step changed to:", currentStep);
+  }, [currentStep]);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // Handle nested location object
+    if (name.startsWith('location.')) {
+      const locationField = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          [locationField]: value
+        }
+      }));
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleCoordinatesChange = (newCoordinates) => {
+    setFormData(prev => ({
+      ...prev,
+      coordinates: newCoordinates
+    }));
+  };
+
+  const handleLocationChange = (newLocation) => {
+    setFormData(prev => ({
+      ...prev,
+      location: newLocation
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -31,11 +87,17 @@ export default function AccountSetup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log("Account setup data:", formData);
+    console.log("Account setup data:", {
+      ...formData,
+      coordinates: formData.coordinates
+    });
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      // Redirect to main app
+      // Mark account setup as complete
+      completeAccountSetup();
+      // Navigate to main app after account setup completion
+      navigate("/");
     }, 2000);
   };
 
@@ -195,31 +257,13 @@ export default function AccountSetup() {
                   />
                 </div>
 
-                {/* Location */}
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-gray-400 group-focus-within:text-white transition-colors" />
-                  </div>
-                  <input
-                    type="text"
-                    name="location"
-                    placeholder="Your location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-4 bg-black/50 border border-neutral-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 focus:border-neutral-400 transition-all duration-200 hover:border-neutral-500"
-                  />
-                </div>
-                
-                <button 
-                  type="button"
-                  className="text-sm text-neutral-400 hover:text-white transition-colors focus:outline-none"
-                  onClick={() => {
-                    // Add location picker functionality here
-                    alert('Location picker feature coming soon!');
-                  }}
-                >
-                  📍 Use current location
-                </button>
+                {/* Location with LocationSelector Component */}
+                <LocationSelector
+                  coordinates={formData.coordinates}
+                  location={formData.location}
+                  onCoordinatesChange={handleCoordinatesChange}
+                  onLocationChange={handleLocationChange}
+                />
               </div>
             )}
 

@@ -11,37 +11,16 @@ const Map = () => {
 
   useEffect(() => {
     const loadMap = () => {
+      console.log('🌙 ColorScheme DARK available:', window.google?.maps?.ColorScheme?.DARK);
+      
       const map = new window.google.maps.Map(mapRef.current, {
         center: { lat: 28.6139, lng: 77.209 }, // Example: New Delhi
         zoom: 12,
-        styles: [
-          {
-            "featureType": "all",
-            "elementType": "geometry.fill",
-            "stylers": [{"color": "#1a1a1a"}]
-          },
-          {
-            "featureType": "all",
-            "elementType": "labels.text.fill",
-            "stylers": [{"color": "#ffffff"}]
-          },
-          {
-            "featureType": "all",
-            "elementType": "labels.text.stroke",
-            "stylers": [{"color": "#000000"}, {"lightness": 13}]
-          },
-          {
-            "featureType": "road",
-            "elementType": "geometry.fill",
-            "stylers": [{"color": "#2a2a2a"}]
-          },
-          {
-            "featureType": "water",
-            "elementType": "geometry.fill",
-            "stylers": [{"color": "#0f4c75"}]
-          }
-        ]
+        mapId: import.meta.env.VITE_GOOGLE_MAPS_ID,
+        colorScheme: window.google.maps.ColorScheme.DARK
       });
+      
+      console.log('🗺️ Map loaded with dark color scheme');
       setIsMapLoaded(true);
     };
 
@@ -53,7 +32,7 @@ const Map = () => {
       const script = document.createElement("script");
       script.src = `https://maps.googleapis.com/maps/api/js?key=${
         import.meta.env.VITE_GOOGLE_MAPS_API
-      }`;
+      }&v=beta`;
       script.async = true;
       script.defer = true;
       script.onload = loadMap;
@@ -78,6 +57,8 @@ const Map = () => {
             const map = new window.google.maps.Map(mapRef.current, {
               center: pos,
               zoom: 15,
+              mapId: import.meta.env.VITE_GOOGLE_MAPS_ID,
+              colorScheme: window.google.maps.ColorScheme.DARK
             });
             new window.google.maps.Marker({
               position: pos,
