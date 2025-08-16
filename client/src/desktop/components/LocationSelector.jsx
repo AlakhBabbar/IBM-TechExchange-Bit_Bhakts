@@ -202,6 +202,13 @@ export default function LocationSelector({
     });
   };
 
+  // Prevent form submission when Enter is pressed in input fields
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div>
       <label className="block text-white font-medium mb-2">
@@ -249,6 +256,7 @@ export default function LocationSelector({
             type="text"
             value={location.street}
             onChange={(e) => handleLocationFieldChange('street', e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -258,6 +266,7 @@ export default function LocationSelector({
             type="text"
             value={location.locality}
             onChange={(e) => handleLocationFieldChange('locality', e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -267,6 +276,7 @@ export default function LocationSelector({
             type="text"
             value={location.city}
             onChange={(e) => handleLocationFieldChange('city', e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -276,6 +286,7 @@ export default function LocationSelector({
             type="text"
             value={location.district}
             onChange={(e) => handleLocationFieldChange('district', e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -285,6 +296,7 @@ export default function LocationSelector({
             type="text"
             value={location.state}
             onChange={(e) => handleLocationFieldChange('state', e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -294,6 +306,7 @@ export default function LocationSelector({
             type="text"
             value={location.country}
             onChange={(e) => handleLocationFieldChange('country', e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>

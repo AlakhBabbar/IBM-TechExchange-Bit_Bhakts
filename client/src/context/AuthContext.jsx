@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged 
 } from "firebase/auth";
+import { createBasicUserProfile, checkUserProfileExists } from "../Firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -17,8 +18,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Sign up with Email
-  const signup = (email, password) => {
-    return createUserWithEmailAndPassword(auth, email, password);
+  const signup = async (email, password, name) => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Create basic profile immediately
+      await createBasicUserProfile(result.user.uid, {
+        name: name,
+        email: email
+      });
+      
+      return result;
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
   };
 
   // Sign in with Email
@@ -27,8 +41,26 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Sign in with Google
-  const signInWithGoogle = () => {
-    return signInWithPopup(auth, googleProvider);
+  const signInWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // Check if this is a new user (first time Google signin)
+      const profileExists = await checkUserProfileExists(result.user.uid);
+      
+      if (!profileExists) {
+        // Create basic profile for new Google users
+        await createBasicUserProfile(result.user.uid, {
+          name: result.user.displayName || "User",
+          email: result.user.email
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Google signin error:", error);
+      throw error;
+    }
   };
 
   // Logout
@@ -47,6 +79,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    isAuthenticated: !!user,
     signup,
     login,
     signInWithGoogle,

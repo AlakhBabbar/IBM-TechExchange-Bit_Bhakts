@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { createBasicUserProfile } from "../../Firebase/firestore";
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -26,8 +27,12 @@ export default function SignUp() {
     setError("");
 
     try {
-      await signup(formData.email, formData.password);
-      // Navigate to account setup after successful signup
+      // Create Firebase Auth account with basic profile
+      const result = await signup(formData.email, formData.password, formData.name);
+
+      console.log("✅ User signed up and basic profile created");
+      
+      // Navigate to account setup
       navigate("/account-setup");
     } catch (error) {
       console.error("Signup error:", error);
@@ -43,7 +48,16 @@ export default function SignUp() {
 
     try {
       const result = await signInWithGoogle();
-      // For signup page, always go to account setup since this is intended as a signup flow
+    
+      // Create basic user profile in Firestore
+      await createBasicUserProfile(result.user.uid, {
+        name: result.user.displayName || "User",
+        email: result.user.email
+      });
+
+      console.log("✅ Google signup and basic profile created");
+      
+      // Navigate to account setup
       navigate("/account-setup");
     } catch (error) {
       console.error("Google signin error:", error);

@@ -1,13 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, MapPin, FileText, Camera, ArrowRight, Upload } from "lucide-react";
+import { User, FileText, Camera, ArrowRight, Upload } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import LocationSelector from "../components/LocationSelector";
+import { completeAccountSetup, uploadProfilePicture } from "../../Firebase/firestore";
 
 export default function AccountSetup() {
   const navigate = useNavigate();
-  const { completeAccountSetup } = useAuth();
+  const { user } = useAuth();
   
+  // Form state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [profilePreview, setProfilePreview] = useState(null);
+  
+  // Form data
   const [formData, setFormData] = useState({
     username: "",
     bio: "",
@@ -18,64 +26,49 @@ export default function AccountSetup() {
       city: "",
       district: "",
       state: "",
-      country: "",
-      postalCode: ""
+      country: ""
     },
     profilePicture: null
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [profilePreview, setProfilePreview] = useState(null);
 
   // Debug logging
   useEffect(() => {
     console.log("🏗️ AccountSetup component mounted");
-    return () => {
-      console.log("🏗️ AccountSetup component unmounted");
-    };
-  }, []);
-  
-  // Debug current step changes
-  useEffect(() => {
-    console.log("🔄 AccountSetup step changed to:", currentStep);
-  }, [currentStep]);
+    console.log("👤 Current user:", user?.uid);
+  }, [user]);
 
+  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Handle nested location object
-    if (name.startsWith('location.')) {
-      const locationField = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        location: {
-          ...prev.location,
-          [locationField]: value
-        }
-      }));
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
+  // Handle coordinates change from LocationSelector
   const handleCoordinatesChange = (newCoordinates) => {
+    console.log("� Coordinates changed:", newCoordinates);
     setFormData(prev => ({
       ...prev,
       coordinates: newCoordinates
     }));
   };
 
+  // Handle location change from LocationSelector
   const handleLocationChange = (newLocation) => {
+    console.log("🏠 Location changed:", newLocation);
     setFormData(prev => ({
       ...prev,
       location: newLocation
     }));
   };
 
+  // Handle file upload
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData({ ...formData, profilePicture: file });
+      setFormData(prev => ({ ...prev, profilePicture: file }));
       const reader = new FileReader();
       reader.onload = () => {
         setProfilePreview(reader.result);
@@ -84,29 +77,77 @@ export default function AccountSetup() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    console.log("Account setup data:", {
-      ...formData,
-      coordinates: formData.coordinates
-    });
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Mark account setup as complete
-      completeAccountSetup();
-      // Navigate to main app after account setup completion
-      navigate("/");
-    }, 2000);
-  };
-
+  // Step navigation
   const nextStep = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+    console.log("🔄 Moving to next step from:", currentStep);
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    console.log("🔄 Moving to previous step from:", currentStep);
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Form submission - ONLY for the final step
+  const handleFinalSubmit = async () => {
+    console.log("🚀 Final form submission triggered");
+    
+    if (!user) {
+      setError("No user found. Please sign up again.");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError("");
+    
+    try {
+      console.log("🔄 Starting account setup completion...");
+      
+      let profilePictureURL = "";
+      
+      // Upload profile picture if provided
+      if (formData.profilePicture) {
+        console.log("📸 Uploading profile picture...");
+        const uploadResult = await uploadProfilePicture(user.uid, formData.profilePicture);
+        if (uploadResult.success) {
+          profilePictureURL = uploadResult.url;
+          console.log("✅ Profile picture uploaded:", profilePictureURL);
+        }
+      }
+      
+      // Prepare the complete profile data
+      const profileData = {
+        username: formData.username,
+        bio: formData.bio,
+        street: formData.location.street,
+        locality: formData.location.locality,
+        city: formData.location.city,
+        district: formData.location.district,
+        state: formData.location.state,
+        country: formData.location.country,
+        coordinates: formData.coordinates,
+        photo: profilePictureURL
+      };
+      
+      console.log("📝 Profile data to update:", profileData);
+      
+      // Complete the account setup
+      await completeAccountSetup(user.uid, profileData);
+      console.log("✅ Account setup completed successfully");
+      
+      // Navigate to main app
+      navigate("/for-you", { replace: true });
+      
+    } catch (error) {
+      console.error("❌ Account setup error:", error);
+      setError(error.message || "Failed to complete account setup");
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -149,6 +190,13 @@ export default function AccountSetup() {
           </p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between mb-2">
@@ -173,154 +221,141 @@ export default function AccountSetup() {
           </div>
         </div>
 
-        {/* Form Container */}
+        {/* Content Container - NO FORM ELEMENT */}
         <div className="bg-neutral-900/60 backdrop-blur-sm rounded-3xl p-8 border border-neutral-800 shadow-xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Step 1: Profile Picture */}
-            {currentStep === 1 && (
-              <div className="text-center space-y-6">
-                <h3 className="text-lg font-medium text-white mb-4">Add Profile Picture</h3>
-                
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-full border-2 border-dashed border-neutral-600 flex items-center justify-center overflow-hidden bg-neutral-800/50">
-                      {profilePreview ? (
-                        <img 
-                          src={profilePreview} 
-                          alt="Profile Preview" 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Camera className="w-8 h-8 text-neutral-400" />
-                      )}
-                    </div>
-                    <label className="absolute bottom-0 right-0 bg-neutral-700 p-2 rounded-full cursor-pointer hover:bg-neutral-600 transition-colors">
-                      <Upload size={16} className="text-white" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
+          
+          {/* Step 1: Profile Picture */}
+          {currentStep === 1 && (
+            <div className="text-center space-y-6">
+              <h3 className="text-lg font-medium text-white mb-4">Add Profile Picture</h3>
+              
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full border-2 border-dashed border-neutral-600 flex items-center justify-center overflow-hidden bg-neutral-800/50">
+                    {profilePreview ? (
+                      <img 
+                        src={profilePreview} 
+                        alt="Profile Preview" 
+                        className="w-full h-full object-cover"
                       />
-                    </label>
+                    ) : (
+                      <Camera className="w-8 h-8 text-neutral-400" />
+                    )}
                   </div>
-                  <p className="text-sm text-neutral-400">
-                    Upload a profile picture or skip for now
-                  </p>
+                  <label className="absolute bottom-0 right-0 bg-neutral-700 p-2 rounded-full cursor-pointer hover:bg-neutral-600 transition-colors">
+                    <Upload size={16} className="text-white" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
-              </div>
-            )}
-
-            {/* Step 2: Username */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-white mb-4">Choose Username</h3>
-                
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-white transition-colors" />
-                  </div>
-                  <input
-                    type="text"
-                    name="username"
-                    placeholder="Enter username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-4 bg-black/50 border border-neutral-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 focus:border-neutral-400 transition-all duration-200 hover:border-neutral-500"
-                    required
-                  />
-                </div>
-                <p className="text-xs text-neutral-500">
-                  This will be your unique identifier on Vivenza
+                <p className="text-sm text-neutral-400">
+                  Upload a profile picture or skip for now
                 </p>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Step 3: Bio & Location */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-white mb-4">Tell us about yourself</h3>
-                
-                {/* Bio */}
-                <div className="relative group">
-                  <div className="absolute top-4 left-0 pl-4 flex items-start pointer-events-none">
-                    <FileText className="h-5 w-5 text-gray-400 group-focus-within:text-white transition-colors" />
-                  </div>
-                  <textarea
-                    name="bio"
-                    placeholder="Write a short bio..."
-                    value={formData.bio}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full pl-12 pr-4 py-4 bg-black/50 border border-neutral-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 focus:border-neutral-400 transition-all duration-200 hover:border-neutral-500 resize-none"
-                  />
+          {/* Step 2: Username & Bio */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-white mb-4">Personal Information</h3>
+              
+              {/* Username */}
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400 group-focus-within:text-white transition-colors" />
                 </div>
-
-                {/* Location with LocationSelector Component */}
-                <LocationSelector
-                  coordinates={formData.coordinates}
-                  location={formData.location}
-                  onCoordinatesChange={handleCoordinatesChange}
-                  onLocationChange={handleLocationChange}
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Enter username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-4 bg-black/50 border border-neutral-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 focus:border-neutral-400 transition-all duration-200 hover:border-neutral-500"
                 />
               </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex gap-3 pt-4">
-              {currentStep > 1 && (
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-4 rounded-xl transition-all duration-200 focus:outline-none"
-                >
-                  Back
-                </button>
-              )}
               
-              {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-4 rounded-xl transition-all duration-200 transform hover:scale-[1.01] flex items-center justify-center gap-2 group focus:outline-none"
-                >
-                  Next
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-4 rounded-xl transition-all duration-200 transform hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group focus:outline-none"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Setting up...
-                    </>
-                  ) : (
-                    <>
-                      Complete Setup
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-              )}
+              {/* Bio */}
+              <div className="relative group">
+                <div className="absolute top-4 left-0 pl-4 flex items-start pointer-events-none">
+                  <FileText className="h-5 w-5 text-gray-400 group-focus-within:text-white transition-colors" />
+                </div>
+                <textarea
+                  name="bio"
+                  placeholder="Write a short bio... (optional)"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full pl-12 pr-4 py-4 bg-black/50 border border-neutral-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 focus:border-neutral-400 transition-all duration-200 hover:border-neutral-500 resize-none"
+                />
+              </div>
+              
+              <p className="text-xs text-neutral-500">
+                Username will be your unique identifier on Vivenza
+              </p>
             </div>
-          </form>
+          )}
 
-          {/* Skip Option */}
-          <div className="mt-6 text-center">
-            <button 
-              className="text-sm text-neutral-400 hover:text-white transition-colors focus:outline-none"
-              onClick={() => {
-                // Skip to main app
-                alert('Skipping to main app...');
-              }}
-            >
-              Skip for now
-            </button>
+          {/* Step 3: Location */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-white mb-4">Location Information</h3>
+              
+              {/* Location with LocationSelector Component */}
+              <LocationSelector
+                coordinates={formData.coordinates}
+                location={formData.location}
+                onCoordinatesChange={handleCoordinatesChange}
+                onLocationChange={handleLocationChange}
+              />
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex gap-3 pt-6">
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-4 rounded-xl transition-all duration-200 focus:outline-none"
+              >
+                Back
+              </button>
+            )}
+            
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-4 rounded-xl transition-all duration-200 transform hover:scale-[1.01] flex items-center justify-center gap-2 group focus:outline-none"
+              >
+                Next
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFinalSubmit}
+                disabled={isLoading}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-4 rounded-xl transition-all duration-200 transform hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group focus:outline-none"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Setting up...
+                  </>
+                ) : (
+                  <>
+                    Complete Setup
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
