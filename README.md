@@ -10,7 +10,7 @@
 
 *A modern, location-based social media platform where users can share their experiences, moods, and moments with the world.*
 
-[Live Demo](#) | [Documentation](#) | [Report Bug](#) | [Request Feature](#)
+
 
 </div>
 
