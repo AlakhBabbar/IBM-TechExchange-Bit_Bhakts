@@ -214,7 +214,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Team Bit_Bhakts** - IBM TechExchange Hackathon
 
 - **Project Link**: [https://github.com/AlakhBabbar/IBM-TechExchange-Bit_Bhakts](https://github.com/AlakhBabbar/IBM-TechExchange-Bit_Bhakts)
-- **Live Demo**: [Coming Soon](#)
+- **Live Demo**: [https://vivenza-eight.vercel.app/profile](https://vivenza-eight.vercel.app/profile)(#)
 
 ---
 
