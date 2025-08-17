@@ -248,6 +248,8 @@ export default function ForYou() {
                   {filteredPosts.map((post, idx) => (
                     <PostCard 
                       key={post.id || idx}
+                      postId={post.id}
+                      userId={post.userId}
                       user={post.username || post.user || 'Unknown User'}
                       userPhoto={post.userPhoto}
                       location={post.location?.locality || post.location}

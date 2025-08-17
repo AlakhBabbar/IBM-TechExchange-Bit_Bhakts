@@ -323,6 +323,8 @@ export default function Trending() {
                   className="cursor-pointer"
                 >
                   <PostCard
+                    postId={post.id}
+                    userId={post.userId || 'dummy-user'}
                     user={post.user}
                     location={post.location}
                     text={post.text}
@@ -357,6 +359,8 @@ export default function Trending() {
             <div className="space-y-6">
               {/* Selected Post First */}
               <PostCard
+                postId={selectedPost.id}
+                userId={selectedPost.userId || 'dummy-user'}
                 user={selectedPost.user}
                 location={selectedPost.location}
                 text={selectedPost.text}
@@ -373,6 +377,8 @@ export default function Trending() {
                   .map((post) => (
                     <PostCard
                       key={post.id}
+                      postId={post.id}
+                      userId={post.userId || 'dummy-user'}
                       user={post.user}
                       location={post.location}
                       text={post.text}
@@ -389,6 +395,8 @@ export default function Trending() {
                   .map((post) => (
                     <PostCard
                       key={post.id}
+                      postId={post.id}
+                      userId={post.userId || 'dummy-user'}
                       user={post.user}
                       location={post.location}
                       text={post.text}

@@ -435,6 +435,8 @@ export default function Explore() {
             <div className="space-y-6">
               {/* Selected Post First */}
               <PostCard
+                postId={selectedPost.id}
+                userId={selectedPost.userId}
                 user={selectedPost.username || selectedPost.user || 'Unknown User'}
                 userPhoto={selectedPost.userPhoto}
                 location={selectedPost.location?.locality || selectedPost.location}
@@ -454,6 +456,8 @@ export default function Explore() {
                 .map((post) => (
                   <PostCard
                     key={post.id}
+                    postId={post.id}
+                    userId={post.userId}
                     user={post.username || post.user || 'Unknown User'}
                     userPhoto={post.userPhoto}
                     location={post.location?.locality || post.location}

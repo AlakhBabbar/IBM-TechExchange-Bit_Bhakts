@@ -320,6 +320,8 @@ function Profile() {
                     {userPosts.map((post) => (
                       <div key={post.id} onClick={() => handlePostClick(post)} className="cursor-pointer">
                         <PostCard
+                          postId={post.id}
+                          userId={post.userId}
                           user={post.username || post.user || 'Unknown User'}
                           userPhoto={post.userPhoto || userProfile?.photo}
                           location={post.location}
@@ -362,6 +364,8 @@ function Profile() {
                     {likedPosts.map((post) => (
                       <div key={post.id} onClick={() => handlePostClick(post)} className="cursor-pointer">
                         <PostCard
+                          postId={post.id}
+                          userId={post.userId}
                           user={post.username || post.user || 'Unknown User'}
                           userPhoto={post.userPhoto || userProfile?.photo}
                           location={post.location}
@@ -414,6 +418,8 @@ function Profile() {
             <div className="space-y-6">
               {/* Selected Post First */}
               <PostCard
+                postId={selectedPost.id}
+                userId={selectedPost.userId}
                 user={selectedPost.username || selectedPost.user || 'Unknown User'}
                 userPhoto={selectedPost.userPhoto || userProfile?.photo}
                 location={selectedPost.location}
@@ -434,6 +440,8 @@ function Profile() {
                   .map((post) => (
                     <PostCard
                       key={post.id}
+                      postId={post.id}
+                      userId={post.userId}
                       user={post.username || post.user || 'Unknown User'}
                       userPhoto={post.userPhoto || userProfile?.photo}
                       location={post.location}
@@ -453,6 +461,8 @@ function Profile() {
                   .map((post) => (
                     <PostCard
                       key={post.id}
+                      postId={post.id}
+                      userId={post.userId}
                       user={post.username || post.user || 'Unknown User'}
                       userPhoto={post.userPhoto || userProfile?.photo}
                       location={post.location}
